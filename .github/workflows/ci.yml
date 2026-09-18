@@ -1,0 +1,76 @@
+# CI for docker-unomp: lint the Dockerfile, build the image, run the
+# smoke test, and scan the image for known vulnerabilities.
+#
+# Runs on every push and pull request. All action versions are pinned
+# to specific tags for reproducibility.
+
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint Dockerfile (hadolint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run hadolint
+        uses: hadolint/hadolint-action@v3.5.0
+        with:
+          dockerfile: Dockerfile
+
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t unomp:test .
+
+  test:
+    name: Smoke test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run smoke test
+        run: bash tests/smoke_test.sh
+        env:
+          UNOMP_IMAGE: unomp:test
+
+  scan:
+    name: Vulnerability scan (trivy)
+    runs-on: ubuntu-latest
+    needs: build
+    # Informational only: the node:0.10 base image is end-of-life and
+    # will always report CVEs. The SARIF report is uploaded as an artifact
+    # so drift can be tracked; upgrade the base image to make this gate pass.
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t unomp:test .
+      - name: Run trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: unomp:test
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: 0
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+      - name: Upload trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-results.sarif
+          if-no-files-found: ignore

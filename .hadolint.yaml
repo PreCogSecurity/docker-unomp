@@ -1,0 +1,11 @@
+# hadolint configuration for docker-unomp
+# Rule reference: https://github.com/hadolint/hadolint#rules
+#
+# The apt-get based rules are disabled because the native build
+# dependencies line is intentionally commented out (prebuilt binaries
+# are fetched by `npm update`). If you uncomment it for source builds,
+# pin the packages and re-enable these rules.
+ignored:
+  - DL3008
+  - DL3009
+  - DL3015

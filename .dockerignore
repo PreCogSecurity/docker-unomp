@@ -1,0 +1,10 @@
+# Keep the build context minimal: the Dockerfile only clones upstream
+# and never COPYs from the context, but a small context avoids sending
+# local state (and potential secrets) to the daemon.
+.git
+.github
+tests
+*.md
+.env
+.env.*
+docker-compose.yml
