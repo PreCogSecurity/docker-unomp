@@ -17,6 +17,8 @@ jobs:
   lint:
     name: Lint Dockerfile (hadolint)
     runs-on: ubuntu-24.04
+    # Fail fast instead of letting a hung step consume the 6h default budget.
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -29,6 +31,10 @@ jobs:
     name: Build image
     runs-on: ubuntu-24.04
     needs: lint
+    # The apt-get step pulls from archive.debian.org and `npm update` compiles
+    # the bignum native module, so give the build a generous budget but still
+    # fail fast if it hangs (e.g. a stalled network fetch).
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -39,6 +45,10 @@ jobs:
     name: Smoke test
     runs-on: ubuntu-24.04
     needs: build
+    # The smoke test rebuilds the image on this fresh runner (the build job's
+    # image is not shared between jobs), so budget for the build plus the
+    # 120s UNOMP startup window.
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -55,6 +65,7 @@ jobs:
     # will always report CVEs. The SARIF report is uploaded as an artifact
     # so drift can be tracked; upgrade the base image to make this gate pass.
     continue-on-error: true
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
