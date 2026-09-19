@@ -13,6 +13,19 @@ on:
     branches: [master, main]
   pull_request:
 
+# Cancel superseded runs (e.g. a newer push to the same branch/PR) so
+# superseded runs do not keep consuming CI minutes or produce ambiguous
+# results.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege for the automatic GITHUB_TOKEN: this workflow only reads
+# repository contents. The scan job additionally needs actions: write to
+# upload its artifact, granted at job level below.
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint Dockerfile (hadolint)
@@ -61,6 +74,11 @@ jobs:
     name: Vulnerability scan (trivy)
     runs-on: ubuntu-24.04
     needs: build
+    # Overrides the workflow-level least-privilege permissions: uploading the
+    # SARIF artifact requires actions: write on the GITHUB_TOKEN.
+    permissions:
+      contents: read
+      actions: write
     # Informational only: the node:0.10 base image is end-of-life and
     # will always report CVEs. The SARIF report is uploaded as an artifact
     # so drift can be tracked; upgrade the base image to make this gate pass.
