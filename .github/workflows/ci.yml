@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Run hadolint
         uses: hadolint/hadolint-action@v3.5.0
         with:
@@ -29,7 +29,7 @@ jobs:
     needs: lint
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Build image
         run: docker build -t unomp:test .
 
@@ -39,7 +39,7 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Run smoke test
         run: bash tests/smoke_test.sh
         env:
@@ -55,7 +55,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Build image
         run: docker build -t unomp:test .
       - name: Run trivy
@@ -69,7 +69,7 @@ jobs:
           ignore-unfixed: true
       - name: Upload trivy report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: trivy-report
           path: trivy-results.sarif

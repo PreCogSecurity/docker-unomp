@@ -1,11 +1,14 @@
 # hadolint configuration for docker-unomp
 # Rule reference: https://github.com/hadolint/hadolint#rules
 #
-# The apt-get based rules are disabled because the native build
-# dependencies line is intentionally commented out (prebuilt binaries
-# are fetched by `npm update`). If you uncomment it for source builds,
-# pin the packages and re-enable these rules.
+# The Dockerfile installs the native build toolchain (build-essential,
+# libssl-dev, python) needed to compile the bignum native module from
+# source during `npm update`. That line follows DL3009 (apt lists are
+# deleted) and DL3015 (--no-install-recommends), so those rules are
+# enforced.
+#
+# DL3008 (pin apt package versions) stays disabled: the node:0.10 base
+# image is an EOL Debian release whose apt repositories are frozen, so
+# exact version pinning would make the build fragile and unverifiable.
 ignored:
   - DL3008
-  - DL3009
-  - DL3015

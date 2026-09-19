@@ -24,9 +24,11 @@ docker build -t unomp .
 ```
 
 The base image and the upstream UNOMP checkout are pinned (base image digest
-and git commit SHA), so repeated builds are reproducible. Dependabot tracks
-base-image updates; bump the `UNOMP_COMMIT` build arg in the `Dockerfile`
-when you deliberately want newer UNOMP code.
+and git commit SHA), so repeated builds are reproducible. The image installs
+the native build toolchain (`build-essential`, `libssl-dev`, `python`) needed
+to compile the `bignum` native module from source during `npm update`.
+Dependabot tracks base-image updates; bump the `UNOMP_COMMIT` build arg in the
+`Dockerfile` when you deliberately want newer UNOMP code.
 
 ## Run
 

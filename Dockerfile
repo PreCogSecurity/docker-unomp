@@ -9,12 +9,15 @@
 
 FROM node:0.10@sha256:c32b4d56f05c69df6e87d06bf7d5f6a5c6a0e7bcdb8e5ffab0e7a1853a90008f
 
-# The native build dependencies line is intentionally commented out: the
-# prebuilt binaries fetched by `npm update` do not require them. If you
-# uncomment it for source builds, pin the packages and re-enable the
-# corresponding hadolint rules (see .hadolint.yaml).
-# RUN apt-get update && apt-get install -y --no-install-recommends build-essential libssl-dev \
-#         && rm -rf /var/lib/apt/lists/*
+# bignum (a native module used for difficulty math) is compiled from source
+# by `npm update`, so the image needs the C/C++ toolchain, the OpenSSL
+# headers, and Python (node-gyp). The packages are intentionally not pinned:
+# the node:0.10 base image is an EOL Debian release whose apt repositories
+# are frozen, so exact version pinning would make the build fragile. DL3008
+# stays disabled for this reason (see .hadolint.yaml).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential libssl-dev python \
+        && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
 RUN mkdir -p /usr/src/app
