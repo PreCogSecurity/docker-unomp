@@ -2,7 +2,9 @@
 # smoke test, and scan the image for known vulnerabilities.
 #
 # Runs on every push and pull request. All action versions are pinned
-# to specific tags for reproducibility.
+# to specific tags for reproducibility, and the runner OS is pinned to a
+# concrete Ubuntu release so builds do not drift when `ubuntu-latest`
+# migrates to a new major version.
 
 name: CI
 
@@ -14,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint Dockerfile (hadolint)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -25,7 +27,7 @@ jobs:
 
   build:
     name: Build image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: lint
     steps:
       - name: Checkout
@@ -35,7 +37,7 @@ jobs:
 
   test:
     name: Smoke test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     steps:
       - name: Checkout
@@ -47,7 +49,7 @@ jobs:
 
   scan:
     name: Vulnerability scan (trivy)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     # Informational only: the node:0.10 base image is end-of-life and
     # will always report CVEs. The SARIF report is uploaded as an artifact

@@ -26,7 +26,9 @@ docker build -t unomp .
 The base image and the upstream UNOMP checkout are pinned (base image digest
 and git commit SHA), so repeated builds are reproducible. The image installs
 the native build toolchain (`build-essential`, `libssl-dev`, `python`) needed
-to compile the `bignum` native module from source during `npm update`.
+to compile the `bignum` native module from source during `npm update`. The
+`node:0.10` base image is Debian jessie (end-of-life), so the `Dockerfile`
+points apt at `archive.debian.org`, which keeps serving archived releases.
 Dependabot tracks base-image updates; bump the `UNOMP_COMMIT` build arg in the
 `Dockerfile` when you deliberately want newer UNOMP code.
 

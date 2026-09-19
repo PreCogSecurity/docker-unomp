@@ -15,7 +15,17 @@ FROM node:0.10@sha256:c32b4d56f05c69df6e87d06bf7d5f6a5c6a0e7bcdb8e5ffab0e7a1853a
 # the node:0.10 base image is an EOL Debian release whose apt repositories
 # are frozen, so exact version pinning would make the build fragile. DL3008
 # stays disabled for this reason (see .hadolint.yaml).
-RUN apt-get update && apt-get install -y --no-install-recommends \
+#
+# The node:0.10 base image is Debian jessie, which reached end-of-life and
+# was removed from the regular mirrors (deb.debian.org / security.debian.org
+# now return 404, breaking `apt-get update`). Point apt at the Debian
+# archive instead, which keeps serving archived releases, and skip the
+# Valid-Until check because the archived Release files are old.
+RUN set -eux; \
+    echo "deb http://archive.debian.org/debian/ jessie main" > /etc/apt/sources.list; \
+    echo "deb http://archive.debian.org/debian-security/ jessie/updates main" >> /etc/apt/sources.list; \
+    rm -f /etc/apt/sources.list.d/*; \
+    apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y --no-install-recommends \
         build-essential libssl-dev python \
         && rm -rf /var/lib/apt/lists/*
 
@@ -29,8 +39,11 @@ ARG UNOMP_COMMIT=72f93ea3f4f52164f71b6f27a630e977edee8d44
 RUN git clone https://github.com/UNOMP/unified-node-open-mining-portal.git unomp
 WORKDIR /usr/src/app/unomp
 # Check out the pinned commit and install dependencies (the upstream install
-# command, see the upstream README).
-RUN git checkout "$UNOMP_COMMIT" && npm update
+# command, see the upstream README). The upstream package.json references
+# some dependencies with `git://` URLs; GitHub disabled the unauthenticated
+# git:// protocol, so rewrite those URLs to https:// for git.
+RUN git config --global url."https://github.com/".insteadOf "git://github.com/" \
+    && git checkout "$UNOMP_COMMIT" && npm update
 
 # Generate config.json from the upstream example on first start so the
 # container runs out of the box (see docker-entrypoint.sh).

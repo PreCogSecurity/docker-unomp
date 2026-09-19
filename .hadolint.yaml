@@ -8,7 +8,8 @@
 # enforced.
 #
 # DL3008 (pin apt package versions) stays disabled: the node:0.10 base
-# image is an EOL Debian release whose apt repositories are frozen, so
-# exact version pinning would make the build fragile and unverifiable.
+# image is an EOL Debian release (jessie) whose apt repositories are
+# frozen — the Dockerfile redirects apt to archive.debian.org — so exact
+# version pinning would make the build fragile and unverifiable.
 ignored:
   - DL3008
