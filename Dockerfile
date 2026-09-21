@@ -20,10 +20,14 @@ FROM node:0.10@sha256:c32b4d56f05c69df6e87d06bf7d5f6a5c6a0e7bcdb8e5ffab0e7a1853a
 # was removed from the regular mirrors (deb.debian.org / security.debian.org
 # now return 404, breaking `apt-get update`). Point apt at the Debian
 # archive instead, which keeps serving archived releases, and skip the
-# Valid-Until check because the archived Release files are old.
+# Valid-Until check because the archived Release files are old. The archive
+# repos are marked [trusted=yes] because the GPG keys that signed their
+# Release files have expired: apt would otherwise treat every package as
+# unauthenticated and abort the install under -y with "E: There are problems
+# and -y was used without --force-yes".
 RUN set -eux; \
-    echo "deb http://archive.debian.org/debian/ jessie main" > /etc/apt/sources.list; \
-    echo "deb http://archive.debian.org/debian-security/ jessie/updates main" >> /etc/apt/sources.list; \
+    echo "deb [trusted=yes] http://archive.debian.org/debian/ jessie main" > /etc/apt/sources.list; \
+    echo "deb [trusted=yes] http://archive.debian.org/debian-security/ jessie/updates main" >> /etc/apt/sources.list; \
     rm -f /etc/apt/sources.list.d/*; \
     apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y --no-install-recommends \
         build-essential libssl-dev python \

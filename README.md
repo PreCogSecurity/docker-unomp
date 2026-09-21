@@ -29,8 +29,11 @@ the native build toolchain (`build-essential`, `libssl-dev`, `python`) needed
 to compile the `bignum` native module from source during `npm update`. The
 `node:0.10` base image is Debian jessie (end-of-life), so the `Dockerfile`
 points apt at `archive.debian.org`, which keeps serving archived releases.
-The upstream `package.json` references some dependencies with `git://` URLs —
-a protocol GitHub no longer serves — so the `Dockerfile` rewrites those URLs
+The archived repositories' GPG signing keys have expired, so the `Dockerfile`
+marks them `[trusted=yes]` and skips the `Valid-Until` check; without this,
+`apt-get` refuses to install the unauthenticated packages under `-y`. The
+upstream `package.json` references some dependencies with `git://` URLs — a
+protocol GitHub no longer serves — so the `Dockerfile` rewrites those URLs
 to `https://` before running `npm update`. Dependabot tracks base-image
 updates; bump the `UNOMP_COMMIT` build arg in the `Dockerfile` when you
 deliberately want newer UNOMP code.
