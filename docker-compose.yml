@@ -1,0 +1,58 @@
+# docker-unomp — UNOMP mining pool portal with a bundled Redis server.
+#
+# Usage:
+#   cp .env.example .env   # optional, to override host port mappings
+#   docker compose up -d
+#
+# The container entrypoint generates config.json from the upstream example on
+# first start, pointing the redis section at host "redis" (the service name
+# below), so the stack works out of the box. To use your own configuration,
+# create ./config.json first, then uncomment the volumes block under `unomp`.
+#
+# Validate with: docker compose config
+
+services:
+  unomp:
+    build: .
+    image: unomp:${UNOMP_IMAGE_TAG:-latest}
+    container_name: unomp
+    restart: unless-stopped
+    depends_on:
+      - redis
+    ports:
+      - "${UNOMP_HTTP_PORT:-80}:80"
+      - "${UNOMP_API_PORT:-3008}:3008"
+      - "${UNOMP_STRATUM_PORT_1:-3032}:3032"
+      - "${UNOMP_STRATUM_PORT_2:-3256}:3256"
+    # Optional: mount your own UNOMP configuration (see README.md). The
+    # entrypoint generates config.json when nothing is mounted, so this is
+    # only needed for custom setups. Create ./config.json FIRST — if the file
+    # does not exist, Docker mounts an empty directory and UNOMP cannot read
+    # its configuration.
+    # volumes:
+    #   - ./config.json:/usr/src/app/unomp/config.json:ro
+    # Checks that the `node init.js` process is alive by scanning /proc
+    # (the node:0.10 base image has no pgrep/netstat).
+    healthcheck:
+      test: ["CMD", "node", "-e", "var fs=require('fs'),found=false;fs.readdirSync('/proc').forEach(function(p){if(/^\\d+/.test(p)){try{if(fs.readFileSync('/proc/'+p+'/cmdline','utf8').indexOf('init.js')>-1)found=true}catch(e){}}});process.exit(found?0:1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  redis:
+    image: redis:6-alpine
+    container_name: unomp-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis-data:

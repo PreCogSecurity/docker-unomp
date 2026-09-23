@@ -1,0 +1,5 @@
+# Local environment overrides (see .env.example)
+.env
+
+# Logs
+*.log

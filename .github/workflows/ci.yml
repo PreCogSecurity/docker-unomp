@@ -1,0 +1,107 @@
+# CI for docker-unomp: lint the Dockerfile, build the image, run the
+# smoke test, and scan the image for known vulnerabilities.
+#
+# Runs on every push and pull request. All action versions are pinned
+# to specific tags for reproducibility, and the runner OS is pinned to a
+# concrete Ubuntu release so builds do not drift when `ubuntu-latest`
+# migrates to a new major version.
+
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+# Cancel superseded runs (e.g. a newer push to the same branch/PR) so
+# superseded runs do not keep consuming CI minutes or produce ambiguous
+# results.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege for the automatic GITHUB_TOKEN: this workflow only reads
+# repository contents. The scan job additionally needs actions: write to
+# upload its artifact, granted at job level below.
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint Dockerfile (hadolint)
+    runs-on: ubuntu-24.04
+    # Fail fast instead of letting a hung step consume the 6h default budget.
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Run hadolint
+        uses: hadolint/hadolint-action@v3.5.0
+        with:
+          dockerfile: Dockerfile
+
+  build:
+    name: Build image
+    runs-on: ubuntu-24.04
+    needs: lint
+    # The apt-get step pulls from archive.debian.org and `npm update` compiles
+    # the bignum native module, so give the build a generous budget but still
+    # fail fast if it hangs (e.g. a stalled network fetch).
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Build image
+        run: docker build -t unomp:test .
+
+  test:
+    name: Smoke test
+    runs-on: ubuntu-24.04
+    needs: build
+    # The smoke test rebuilds the image on this fresh runner (the build job's
+    # image is not shared between jobs), so budget for the build plus the
+    # 120s UNOMP startup window.
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Run smoke test
+        run: bash tests/smoke_test.sh
+        env:
+          UNOMP_IMAGE: unomp:test
+
+  scan:
+    name: Vulnerability scan (trivy)
+    runs-on: ubuntu-24.04
+    needs: build
+    # Overrides the workflow-level least-privilege permissions: uploading the
+    # SARIF artifact requires actions: write on the GITHUB_TOKEN.
+    permissions:
+      contents: read
+      actions: write
+    # Informational only: the node:0.10 base image is end-of-life and
+    # will always report CVEs. The SARIF report is uploaded as an artifact
+    # so drift can be tracked; upgrade the base image to make this gate pass.
+    continue-on-error: true
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Build image
+        run: docker build -t unomp:test .
+      - name: Run trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: unomp:test
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: 0
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+      - name: Upload trivy report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: trivy-report
+          path: trivy-results.sarif
+          if-no-files-found: ignore
